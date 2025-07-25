@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import ChallengeList from './pages/ChallengeList';
+import ChallengePage from './pages/ChallengePage';
 import Navbar from './components/Navbar';
 
 const App = () => (
@@ -10,6 +11,7 @@ const App = () => (
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/challenges" element={<ChallengeList />} />
+        <Route path="/challenges/:id" element={<ChallengePage />} />
       </Routes>
     </div>
   </Router>
