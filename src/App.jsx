@@ -3,6 +3,7 @@ import Home from './pages/Home';
 import ChallengeList from './pages/ChallengeList';
 import ChallengePage from './pages/ChallengePage';
 import Navbar from './components/Navbar';
+import Dashboard from './pages/Dashboard';
 
 const App = () => (
   <Router>
@@ -12,6 +13,7 @@ const App = () => (
         <Route path="/" element={<Home />} />
         <Route path="/challenges" element={<ChallengeList />} />
         <Route path="/challenges/:id" element={<ChallengePage />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </div>
   </Router>
