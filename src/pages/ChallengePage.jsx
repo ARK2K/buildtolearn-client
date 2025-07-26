@@ -12,14 +12,28 @@ const ChallengePage = () => {
   const [activeTab, setActiveTab] = useState('html');
   const [loading, setLoading] = useState(true);
 
+  const storageKey = `challenge-code-${id}`;
+
+  // Load from localStorage or backend
   useEffect(() => {
     const fetchChallenge = async () => {
       try {
+        const saved = JSON.parse(localStorage.getItem(storageKey));
+
+        if (saved) {
+          setHtml(saved.html || '');
+          setCss(saved.css || '');
+          setJs(saved.js || '');
+        }
+
         const res = await axios.get(`http://localhost:5000/api/challenges/${id}`);
         setChallenge(res.data);
-        setHtml(res.data.htmlStarter || '');
-        setCss(res.data.cssStarter || '');
-        setJs(res.data.jsStarter || '');
+
+        if (!saved) {
+          setHtml(res.data.htmlStarter || '');
+          setCss(res.data.cssStarter || '');
+          setJs(res.data.jsStarter || '');
+        }
       } catch (err) {
         console.error('Failed to load challenge', err);
       } finally {
@@ -30,32 +44,40 @@ const ChallengePage = () => {
     fetchChallenge();
   }, [id]);
 
-  const generateCode = () => {
-    return `
-      <html>
-        <head>
-          <style>${css}</style>
-        </head>
-        <body>
-          ${html}
-          <script>${js}<\/script>
-        </body>
-      </html>
-    `;
-  };
+  // Auto-save on code changes
+  useEffect(() => {
+    if (!loading) {
+      const timeout = setTimeout(() => {
+        const code = { html, css, js };
+        localStorage.setItem(storageKey, JSON.stringify(code));
+      }, 500); // debounce save after 500ms
+
+      return () => clearTimeout(timeout);
+    }
+  }, [html, css, js, loading]);
+
+  const generateCode = () => `
+    <html>
+      <head><style>${css}</style></head>
+      <body>
+        ${html}
+        <script>${js}<\/script>
+      </body>
+    </html>
+  `;
 
   if (loading) return <div className="p-6 text-center">Loading...</div>;
   if (!challenge) return <div className="p-6 text-center text-red-600">Challenge not found.</div>;
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen">
-      {/* Left - Challenge Description */}
+      {/* Left - Challenge Info */}
       <div className="w-full lg:w-1/3 border-r border-gray-200 p-4">
         <h1 className="text-2xl font-bold mb-4">{challenge.title}</h1>
         <p className="text-gray-600 mb-4">{challenge.description}</p>
         <img
           src={challenge.image}
-          alt="Challenge Preview"
+          alt={challenge.title}
           className="rounded-lg shadow mb-4"
         />
         <ul className="text-sm text-gray-500 list-disc list-inside">
@@ -65,7 +87,7 @@ const ChallengePage = () => {
         </ul>
       </div>
 
-      {/* Right - Editor + Preview */}
+      {/* Right - Editor and Preview */}
       <div className="w-full lg:w-2/3 p-4 flex flex-col">
         {/* Tabs */}
         <div className="flex space-x-2 mb-2">
