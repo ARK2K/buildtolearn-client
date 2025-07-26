@@ -1,14 +1,34 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import axios from 'axios';
 import Editor from '@monaco-editor/react';
 
 const ChallengePage = () => {
   const { id } = useParams();
-
-  const [html, setHtml] = useState('<div>Hello UI Challenger!</div>');
-  const [css, setCss] = useState('div { color: blue; font-size: 24px; }');
+  const [challenge, setChallenge] = useState(null);
+  const [html, setHtml] = useState('');
+  const [css, setCss] = useState('');
   const [js, setJs] = useState('');
   const [activeTab, setActiveTab] = useState('html');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchChallenge = async () => {
+      try {
+        const res = await axios.get(`http://localhost:5000/api/challenges/${id}`);
+        setChallenge(res.data);
+        setHtml(res.data.htmlStarter || '');
+        setCss(res.data.cssStarter || '');
+        setJs(res.data.jsStarter || '');
+      } catch (err) {
+        console.error('Failed to load challenge', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchChallenge();
+  }, [id]);
 
   const generateCode = () => {
     return `
@@ -24,29 +44,30 @@ const ChallengePage = () => {
     `;
   };
 
+  if (loading) return <div className="p-6 text-center">Loading...</div>;
+  if (!challenge) return <div className="p-6 text-center text-red-600">Challenge not found.</div>;
+
   return (
     <div className="flex flex-col lg:flex-row min-h-screen">
       {/* Left - Challenge Description */}
       <div className="w-full lg:w-1/3 border-r border-gray-200 p-4">
-        <h1 className="text-2xl font-bold mb-4">Challenge Title</h1>
-        <p className="text-gray-600 mb-4">
-          Rebuild this UI using HTML, CSS, and JavaScript. You have limited time and resources.
-        </p>
+        <h1 className="text-2xl font-bold mb-4">{challenge.title}</h1>
+        <p className="text-gray-600 mb-4">{challenge.description}</p>
         <img
-          src={`https://source.unsplash.com/featured/600x300?ui,design`}
+          src={challenge.image}
           alt="Challenge Preview"
           className="rounded-lg shadow mb-4"
         />
         <ul className="text-sm text-gray-500 list-disc list-inside">
-          <li>Use only HTML/CSS/JS (no frameworks)</li>
+          <li>Difficulty: {challenge.difficulty}</li>
+          <li>Use only HTML/CSS/JS</li>
           <li>Make it responsive</li>
-          <li>Try to match the layout exactly</li>
         </ul>
       </div>
 
-      {/* Right - Code Editor + Preview */}
+      {/* Right - Editor + Preview */}
       <div className="w-full lg:w-2/3 p-4 flex flex-col">
-        {/* Editor Tabs */}
+        {/* Tabs */}
         <div className="flex space-x-2 mb-2">
           {['html', 'css', 'js'].map((lang) => (
             <button
@@ -80,10 +101,9 @@ const ChallengePage = () => {
         <h2 className="text-lg font-semibold mb-2">Live Preview</h2>
         <iframe
           title="preview"
-          className="flex-1 border rounded-lg bg-white"
+          className="flex-1 border border-gray-300 rounded-lg bg-white"
           srcDoc={generateCode()}
           sandbox="allow-scripts"
-          frameBorder="0"
         />
       </div>
     </div>
