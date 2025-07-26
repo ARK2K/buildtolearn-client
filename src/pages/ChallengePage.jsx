@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import Editor from '@monaco-editor/react';
+import { toast } from 'sonner';
 
 const ChallengePage = () => {
   const { id } = useParams();
@@ -14,7 +15,7 @@ const ChallengePage = () => {
 
   const storageKey = `challenge-code-${id}`;
 
-  // Load from localStorage or backend
+  // Load challenge + restore saved code
   useEffect(() => {
     const fetchChallenge = async () => {
       try {
@@ -44,18 +45,18 @@ const ChallengePage = () => {
     fetchChallenge();
   }, [id]);
 
-  // Auto-save on code changes
+  // Auto-save to localStorage
   useEffect(() => {
     if (!loading) {
       const timeout = setTimeout(() => {
         const code = { html, css, js };
         localStorage.setItem(storageKey, JSON.stringify(code));
-      }, 500); // debounce save after 500ms
-
+      }, 500);
       return () => clearTimeout(timeout);
     }
   }, [html, css, js, loading]);
 
+  // Generate preview code
   const generateCode = () => `
     <html>
       <head><style>${css}</style></head>
@@ -65,6 +66,32 @@ const ChallengePage = () => {
       </body>
     </html>
   `;
+
+  // Handle submission
+  const handleSubmit = async () => {
+    try {
+      toast.loading('Submitting your code...', { id: 'submit' });
+
+      const res = await axios.post('http://localhost:5000/api/submissions', {
+        challengeId: id,
+        html,
+        css,
+        js,
+      });
+
+      toast.dismiss('submit');
+
+      if (res.data.success) {
+        toast.success(`✅ Score: ${res.data.score} — ${res.data.feedback}`);
+      } else {
+        toast.error('❌ Submission failed. Try again.');
+      }
+    } catch (err) {
+      console.error('Submission error:', err);
+      toast.dismiss('submit');
+      toast.error('Something went wrong during submission.');
+    }
+  };
 
   if (loading) return <div className="p-6 text-center">Loading...</div>;
   if (!challenge) return <div className="p-6 text-center text-red-600">Challenge not found.</div>;
@@ -87,7 +114,7 @@ const ChallengePage = () => {
         </ul>
       </div>
 
-      {/* Right - Editor and Preview */}
+      {/* Right - Editor + Preview + Submit */}
       <div className="w-full lg:w-2/3 p-4 flex flex-col">
         {/* Tabs */}
         <div className="flex space-x-2 mb-2">
@@ -127,6 +154,14 @@ const ChallengePage = () => {
           srcDoc={generateCode()}
           sandbox="allow-scripts"
         />
+
+        {/* Submit Button */}
+        <button
+          onClick={handleSubmit}
+          className="mt-4 self-start bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow transition"
+        >
+          Submit Challenge
+        </button>
       </div>
     </div>
   );
