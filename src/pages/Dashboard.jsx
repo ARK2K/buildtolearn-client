@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@clerk/clerk-react';
 
 const Dashboard = () => {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { getToken } = useAuth();
 
   useEffect(() => {
     const fetchSubmissions = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/submissions/user');
+        const token = await getToken(); // 🔐 Clerk token for this user
+        const res = await axios.get('http://localhost:5000/api/submissions/user', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         setSubmissions(res.data);
       } catch (err) {
         console.error('Failed to fetch submissions', err);
@@ -19,7 +26,7 @@ const Dashboard = () => {
     };
 
     fetchSubmissions();
-  }, []);
+  }, [getToken]);
 
   if (loading) return <div className="p-6 text-center">Loading dashboard...</div>;
 

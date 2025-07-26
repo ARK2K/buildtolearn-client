@@ -1,5 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  UserButton,
+  SignedIn,
+  SignedOut,
+  SignInButton,
+} from '@clerk/clerk-react';
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -18,7 +24,7 @@ const Navbar = () => {
         </Link>
 
         {/* Desktop Links */}
-        <ul className="hidden md:flex space-x-6 font-medium">
+        <ul className="hidden md:flex space-x-6 font-medium items-center">
           {navLinks.map((link) => (
             <li key={link.to}>
               <Link
@@ -29,6 +35,18 @@ const Navbar = () => {
               </Link>
             </li>
           ))}
+          <li>
+            <SignedIn>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
+            <SignedOut>
+              <SignInButton mode="modal">
+                <button className="bg-indigo-600 text-white px-3 py-1 rounded-lg text-sm hover:bg-indigo-700 transition">
+                  Sign In
+                </button>
+              </SignInButton>
+            </SignedOut>
+          </li>
         </ul>
 
         {/* Mobile Menu Button */}
@@ -67,6 +85,18 @@ const Navbar = () => {
                 </Link>
               </li>
             ))}
+            <li>
+              <SignedIn>
+                <UserButton afterSignOutUrl="/" />
+              </SignedIn>
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <button className="w-full text-left bg-indigo-600 text-white px-3 py-1 rounded-lg text-sm hover:bg-indigo-700 transition">
+                    Sign In
+                  </button>
+                </SignInButton>
+              </SignedOut>
+            </li>
           </ul>
         </div>
       )}
