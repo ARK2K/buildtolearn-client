@@ -14,7 +14,7 @@ const ChallengePage = () => {
   const [loading, setLoading] = useState(true);
 
   const storageKey = `challenge-code-${id}`;
-  const fallbackImage = '/fallback.png';
+  const fallbackImage = '/fallback.jpg';
 
   // Load challenge + restore saved code
   useEffect(() => {
