@@ -14,6 +14,7 @@ const ChallengePage = () => {
   const [loading, setLoading] = useState(true);
 
   const storageKey = `challenge-code-${id}`;
+  const fallbackImage = '/fallback.png';
 
   // Load challenge + restore saved code
   useEffect(() => {
@@ -103,7 +104,7 @@ const ChallengePage = () => {
         <h1 className="text-2xl font-bold mb-4">{challenge.title}</h1>
         <p className="text-gray-600 mb-4">{challenge.description}</p>
         <img
-          src={challenge.image}
+          src={challenge.image || fallbackImage}
           alt={challenge.title}
           className="rounded-lg shadow mb-4"
         />

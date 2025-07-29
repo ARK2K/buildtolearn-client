@@ -1,39 +1,41 @@
+import { useEffect, useState } from 'react';
+import axios from 'axios';
 import ChallengeCard from '../components/ChallengeCard';
 
-const sampleChallenges = [
-  {
-    _id: '1',
-    title: 'Netflix Navbar',
-    description: 'Recreate the responsive navbar from Netflix.',
-    image: 'https://source.unsplash.com/featured/400x225?ui,netflix',
-    difficulty: 'Easy',
-  },
-  {
-    _id: '2',
-    title: 'Trello Board',
-    description: 'Build a drag-and-drop Trello-style board.',
-    image: 'https://source.unsplash.com/featured/400x225?ui,kanban',
-    difficulty: 'Medium',
-  },
-  {
-    _id: '3',
-    title: 'Discord Chat UI',
-    description: 'Clone the message interface of Discord.',
-    image: 'https://source.unsplash.com/featured/400x225?ui,chat',
-    difficulty: 'Hard',
-  },
-];
-
 const ChallengeList = () => {
+  const [challenges, setChallenges] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchChallenges = async () => {
+      try {
+        const res = await axios.get('http://localhost:5000/api/challenges');
+        setChallenges(res.data);
+      } catch (err) {
+        console.error('Failed to fetch challenges:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchChallenges();
+  }, []);
+
+  if (loading) return <p className="text-center mt-10">Loading challenges...</p>;
+
   return (
     <section className="max-w-6xl mx-auto px-4 py-8">
       <h2 className="text-2xl font-bold mb-6 text-center">Available Challenges</h2>
 
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {sampleChallenges.map((challenge) => (
-          <ChallengeCard key={challenge._id} challenge={challenge} />
-        ))}
-      </div>
+      {challenges.length === 0 ? (
+        <p className="text-center text-gray-500">No challenges found.</p>
+      ) : (
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {challenges.map((challenge) => (
+            <ChallengeCard key={challenge._id} challenge={challenge} />
+          ))}
+        </div>
+      )}
     </section>
   );
 };
