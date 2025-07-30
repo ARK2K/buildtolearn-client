@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import Editor from '@monaco-editor/react';
 import { toast } from 'sonner';
+import { io } from 'socket.io-client';
 import { useAuth } from '@clerk/clerk-react';
+
+const socket = io('http://localhost:5000'); // Socket.IO backend URL
 
 const ChallengePage = () => {
   const { id } = useParams();
@@ -18,8 +21,24 @@ const ChallengePage = () => {
 
   const storageKey = `challenge-code-${id}`;
   const fallbackImage = '/fallback.jpg';
+  const isInitialLoad = useRef(true);
 
-  // Load challenge + restore saved code
+  // Socket-based collaboration sync
+  useEffect(() => {
+    socket.emit('join-room', id);
+
+    socket.on('code-update', ({ lang, value }) => {
+      if (lang === 'html') setHtml(value);
+      else if (lang === 'css') setCss(value);
+      else if (lang === 'js') setJs(value);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [id]);
+
+  // Fetch challenge + load saved code
   useEffect(() => {
     const fetchChallenge = async () => {
       try {
@@ -49,7 +68,7 @@ const ChallengePage = () => {
     fetchChallenge();
   }, [id]);
 
-  // Auto-save to localStorage
+  // Save + sync code
   useEffect(() => {
     if (!loading) {
       const timeout = setTimeout(() => {
@@ -60,7 +79,14 @@ const ChallengePage = () => {
     }
   }, [html, css, js, loading]);
 
-  // Generate preview code
+  const emitCodeChange = (lang, value) => {
+    if (!isInitialLoad.current) {
+      socket.emit('code-change', { room: id, lang, value });
+    } else {
+      isInitialLoad.current = false;
+    }
+  };
+
   const generateCode = () => `
     <html>
       <head><style>${css}</style></head>
@@ -71,35 +97,27 @@ const ChallengePage = () => {
     </html>
   `;
 
-  // Handle submission
   const handleSubmit = async () => {
     try {
-      toast.loading('Submitting your code...', { id: 'submit' });
-
+      toast.loading('Submitting...', { id: 'submit' });
       const token = await getToken();
 
-      const res = await axios.post('http://localhost:5000/api/submissions', {
-        challengeId: id,
-        html,
-        css,
-        js,
-      }, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await axios.post(
+        'http://localhost:5000/api/submissions',
+        { challengeId: id, html, css, js },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
       toast.dismiss('submit');
 
-      if (res.data.success) {
+      if (res.data.passed) {
         toast.success(`✅ Score: ${res.data.score} — ${res.data.feedback}`);
       } else {
-        toast.error('❌ Submission failed. Try again.');
+        toast.error(`❌ Score: ${res.data.score} — ${res.data.feedback}`);
       }
     } catch (err) {
-      console.error('Submission error:', err);
       toast.dismiss('submit');
-      toast.error('Something went wrong during submission.');
+      toast.error('Submission failed.');
     }
   };
 
@@ -108,7 +126,6 @@ const ChallengePage = () => {
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen">
-      {/* Left - Challenge Info */}
       <div className="w-full lg:w-1/3 border-r border-gray-200 p-4">
         <h1 className="text-2xl font-bold mb-4">{challenge.title}</h1>
         <p className="text-gray-600 mb-4">{challenge.description}</p>
@@ -124,9 +141,7 @@ const ChallengePage = () => {
         </ul>
       </div>
 
-      {/* Right - Editor + Preview + Submit */}
       <div className="w-full lg:w-2/3 p-4 flex flex-col">
-        {/* Tabs */}
         <div className="flex space-x-2 mb-2">
           {['html', 'css', 'js'].map((lang) => (
             <button
@@ -141,7 +156,6 @@ const ChallengePage = () => {
           ))}
         </div>
 
-        {/* Editor */}
         <div className="h-64 mb-4 border border-gray-200 rounded-lg overflow-hidden">
           <Editor
             height="100%"
@@ -152,11 +166,11 @@ const ChallengePage = () => {
               if (activeTab === 'html') setHtml(value);
               else if (activeTab === 'css') setCss(value);
               else setJs(value);
+              emitCodeChange(activeTab, value);
             }}
           />
         </div>
 
-        {/* Preview */}
         <h2 className="text-lg font-semibold mb-2">Live Preview</h2>
         <iframe
           title="preview"
@@ -165,7 +179,6 @@ const ChallengePage = () => {
           sandbox="allow-scripts"
         />
 
-        {/* Submit Button */}
         <button
           onClick={handleSubmit}
           className="mt-4 self-start bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow transition"
