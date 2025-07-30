@@ -3,9 +3,12 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import Editor from '@monaco-editor/react';
 import { toast } from 'sonner';
+import { useAuth } from '@clerk/clerk-react';
 
 const ChallengePage = () => {
   const { id } = useParams();
+  const { getToken } = useAuth();
+
   const [challenge, setChallenge] = useState(null);
   const [html, setHtml] = useState('');
   const [css, setCss] = useState('');
@@ -73,11 +76,17 @@ const ChallengePage = () => {
     try {
       toast.loading('Submitting your code...', { id: 'submit' });
 
+      const token = await getToken();
+
       const res = await axios.post('http://localhost:5000/api/submissions', {
         challengeId: id,
         html,
         css,
         js,
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       toast.dismiss('submit');
