@@ -7,6 +7,7 @@ import ChallengeList from './pages/ChallengeList';
 import ChallengePage from './pages/ChallengePage';
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
+import Leaderboard from './pages/Leaderboard';
 
 const RequireAuth = ({ children }) => {
   const { isSignedIn } = useUser();
@@ -40,6 +41,7 @@ const App = () => (
           </RequireAuth>
         }
       />
+      <Route path="/leaderboard" element={<Leaderboard />} />
     </Routes>
   </div>
 );
