@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { io } from 'socket.io-client';
 import { useAuth } from '@clerk/clerk-react';
 
-const socket = io('http://localhost:5000'); // Socket.IO backend URL
+const socket = io('http://localhost:5000');
 
 const ChallengePage = () => {
   const { id } = useParams();
@@ -19,31 +19,17 @@ const ChallengePage = () => {
   const [activeTab, setActiveTab] = useState('html');
   const [loading, setLoading] = useState(true);
 
-  const storageKey = `challenge-code-${id}`;
   const fallbackImage = '/fallback.jpg';
-  const isInitialLoad = useRef(true);
+  const storageKey = `challenge-code-${id}`;
 
-  // Socket-based collaboration sync
-  useEffect(() => {
-    socket.emit('join-room', id);
+  const htmlRef = useRef('');
+  const cssRef = useRef('');
+  const jsRef = useRef('');
 
-    socket.on('code-update', ({ lang, value }) => {
-      if (lang === 'html') setHtml(value);
-      else if (lang === 'css') setCss(value);
-      else if (lang === 'js') setJs(value);
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [id]);
-
-  // Fetch challenge + load saved code
   useEffect(() => {
     const fetchChallenge = async () => {
       try {
         const saved = JSON.parse(localStorage.getItem(storageKey));
-
         if (saved) {
           setHtml(saved.html || '');
           setCss(saved.css || '');
@@ -68,7 +54,21 @@ const ChallengePage = () => {
     fetchChallenge();
   }, [id]);
 
-  // Save + sync code
+  useEffect(() => {
+    socket.emit('join-room', id);
+
+    socket.on('code-update', ({ html, css, js }) => {
+      if (html !== undefined) setHtml(html);
+      if (css !== undefined) setCss(css);
+      if (js !== undefined) setJs(js);
+    });
+
+    return () => {
+      socket.emit('leave-room', id);
+      socket.off('code-update');
+    };
+  }, [id]);
+
   useEffect(() => {
     if (!loading) {
       const timeout = setTimeout(() => {
@@ -79,11 +79,57 @@ const ChallengePage = () => {
     }
   }, [html, css, js, loading]);
 
-  const emitCodeChange = (lang, value) => {
-    if (!isInitialLoad.current) {
-      socket.emit('code-change', { room: id, lang, value });
+  const handleCodeChange = (lang, value) => {
+    if (lang === 'html') {
+      setHtml(value);
+      htmlRef.current = value;
+    } else if (lang === 'css') {
+      setCss(value);
+      cssRef.current = value;
     } else {
-      isInitialLoad.current = false;
+      setJs(value);
+      jsRef.current = value;
+    }
+
+    socket.emit('code-change', {
+      room: id,
+      html: lang === 'html' ? value : undefined,
+      css: lang === 'css' ? value : undefined,
+      js: lang === 'js' ? value : undefined,
+    });
+  };
+
+  const handleSubmit = async () => {
+    try {
+      toast.loading('Submitting your code...', { id: 'submit' });
+
+      const token = await getToken();
+      const res = await axios.post(
+        'http://localhost:5000/api/submissions',
+        {
+          challengeId: id,
+          challengeTitle: challenge.title,
+          html,
+          css,
+          js,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      toast.dismiss('submit');
+
+      if (res.data.success) {
+        toast.success(`✅ Score: ${res.data.score} — ${res.data.feedback}`);
+      } else {
+        toast.error('❌ Submission failed. Try again.');
+      }
+    } catch (err) {
+      toast.dismiss('submit');
+      toast.error('Submission error');
     }
   };
 
@@ -97,35 +143,12 @@ const ChallengePage = () => {
     </html>
   `;
 
-  const handleSubmit = async () => {
-    try {
-      toast.loading('Submitting...', { id: 'submit' });
-      const token = await getToken();
-
-      const res = await axios.post(
-        'http://localhost:5000/api/submissions',
-        { challengeId: id, html, css, js },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      toast.dismiss('submit');
-
-      if (res.data.passed) {
-        toast.success(`✅ Score: ${res.data.score} — ${res.data.feedback}`);
-      } else {
-        toast.error(`❌ Score: ${res.data.score} — ${res.data.feedback}`);
-      }
-    } catch (err) {
-      toast.dismiss('submit');
-      toast.error('Submission failed.');
-    }
-  };
-
   if (loading) return <div className="p-6 text-center">Loading...</div>;
   if (!challenge) return <div className="p-6 text-center text-red-600">Challenge not found.</div>;
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen">
+      {/* Left - Challenge Info */}
       <div className="w-full lg:w-1/3 border-r border-gray-200 p-4">
         <h1 className="text-2xl font-bold mb-4">{challenge.title}</h1>
         <p className="text-gray-600 mb-4">{challenge.description}</p>
@@ -141,6 +164,7 @@ const ChallengePage = () => {
         </ul>
       </div>
 
+      {/* Right - Editor + Preview + Submit */}
       <div className="w-full lg:w-2/3 p-4 flex flex-col">
         <div className="flex space-x-2 mb-2">
           {['html', 'css', 'js'].map((lang) => (
@@ -162,12 +186,7 @@ const ChallengePage = () => {
             language={activeTab}
             theme="vs-dark"
             value={activeTab === 'html' ? html : activeTab === 'css' ? css : js}
-            onChange={(value) => {
-              if (activeTab === 'html') setHtml(value);
-              else if (activeTab === 'css') setCss(value);
-              else setJs(value);
-              emitCodeChange(activeTab, value);
-            }}
+            onChange={(value) => handleCodeChange(activeTab, value)}
           />
         </div>
 
