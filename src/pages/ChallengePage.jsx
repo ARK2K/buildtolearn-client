@@ -5,6 +5,7 @@ import Editor from '@monaco-editor/react';
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
 import { useAuth } from '@clerk/clerk-react';
+import ChallengeLeaderboard from '../components/ChallengeLeaderboard';
 
 const socket = io('http://localhost:5000');
 
@@ -204,6 +205,9 @@ const ChallengePage = () => {
         >
           Submit Challenge
         </button>
+
+        {/* 🏆 Leaderboard */}
+        <ChallengeLeaderboard challengeId={id} />
       </div>
     </div>
   );

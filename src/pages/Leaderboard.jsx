@@ -22,6 +22,13 @@ const Leaderboard = () => {
 
   if (loading) return <div className="p-6 text-center">Loading leaderboard...</div>;
 
+  const getBadge = (rank) => {
+    if (rank === 1) return '🥇';
+    if (rank === 2) return '🥈';
+    if (rank === 3) return '🥉';
+    return `#${rank}`;
+  };
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-center mb-6">🏆 Leaderboard</h1>
@@ -33,15 +40,15 @@ const Leaderboard = () => {
             <thead>
               <tr className="bg-gray-100 text-sm text-gray-600 uppercase tracking-wider">
                 <th className="px-4 py-3">Rank</th>
-                <th className="px-4 py-3">User ID</th>
+                <th className="px-4 py-3">User</th>
                 <th className="px-4 py-3">Best Score</th>
               </tr>
             </thead>
             <tbody>
               {leaders.map((entry, idx) => (
                 <tr key={entry.userId} className="border-t text-sm hover:bg-gray-50">
-                  <td className="px-4 py-2 font-semibold">{idx + 1}</td>
-                  <td className="px-4 py-2">{entry.userId}</td>
+                  <td className="px-4 py-2 font-semibold">{getBadge(idx + 1)}</td>
+                  <td className="px-4 py-2">{entry.username || entry.userId}</td>
                   <td className="px-4 py-2">{entry.bestScore}</td>
                 </tr>
               ))}
