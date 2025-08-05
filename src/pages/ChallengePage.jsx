@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { io } from 'socket.io-client';
 import { useAuth } from '@clerk/clerk-react';
 import ChallengeLeaderboard from '../components/ChallengeLeaderboard';
+import ViewReplayModal from '../components/ViewReplayModal';
 
 const socket = io('http://localhost:5000');
 
@@ -19,6 +20,8 @@ const ChallengePage = () => {
   const [js, setJs] = useState('');
   const [activeTab, setActiveTab] = useState('html');
   const [loading, setLoading] = useState(true);
+  const [showReplay, setShowReplay] = useState(false);
+  const [replayData, setReplayData] = useState(null);
 
   const fallbackImage = '/fallback.jpg';
   const storageKey = `challenge-code-${id}`;
@@ -27,6 +30,7 @@ const ChallengePage = () => {
   const cssRef = useRef('');
   const jsRef = useRef('');
 
+  // 🧠 Fetch challenge
   useEffect(() => {
     const fetchChallenge = async () => {
       try {
@@ -55,6 +59,7 @@ const ChallengePage = () => {
     fetchChallenge();
   }, [id]);
 
+  // 🔄 Socket: Join room and listen for code changes
   useEffect(() => {
     socket.emit('join-room', id);
 
@@ -70,6 +75,7 @@ const ChallengePage = () => {
     };
   }, [id]);
 
+  // 💾 Autosave code
   useEffect(() => {
     if (!loading) {
       const timeout = setTimeout(() => {
@@ -80,6 +86,7 @@ const ChallengePage = () => {
     }
   }, [html, css, js, loading]);
 
+  // 🧠 Code change
   const handleCodeChange = (lang, value) => {
     if (lang === 'html') {
       setHtml(value);
@@ -93,13 +100,14 @@ const ChallengePage = () => {
     }
 
     socket.emit('code-change', {
-      room: id,
+      roomId: id,
       html: lang === 'html' ? value : undefined,
       css: lang === 'css' ? value : undefined,
       js: lang === 'js' ? value : undefined,
     });
   };
 
+  // 🚀 Submit code
   const handleSubmit = async () => {
     try {
       toast.loading('Submitting your code...', { id: 'submit' });
@@ -134,6 +142,7 @@ const ChallengePage = () => {
     }
   };
 
+  // 🧠 Generate preview
   const generateCode = () => `
     <html>
       <head><style>${css}</style></head>
@@ -143,6 +152,12 @@ const ChallengePage = () => {
       </body>
     </html>
   `;
+
+  // 🔍 Show replay modal
+  const openReplay = (submission) => {
+    setReplayData(submission);
+    setShowReplay(true);
+  };
 
   if (loading) return <div className="p-6 text-center">Loading...</div>;
   if (!challenge) return <div className="p-6 text-center text-red-600">Challenge not found.</div>;
@@ -165,7 +180,7 @@ const ChallengePage = () => {
         </ul>
       </div>
 
-      {/* Right - Editor + Preview + Submit */}
+      {/* Right - Editor + Preview + Leaderboard */}
       <div className="w-full lg:w-2/3 p-4 flex flex-col">
         <div className="flex space-x-2 mb-2">
           {['html', 'css', 'js'].map((lang) => (
@@ -206,8 +221,14 @@ const ChallengePage = () => {
           Submit Challenge
         </button>
 
-        {/* 🏆 Leaderboard */}
-        <ChallengeLeaderboard challengeId={id} />
+        {/* 🏆 Leaderboard + Modal */}
+        <ChallengeLeaderboard challengeId={id} onReplay={openReplay} />
+
+        <ViewReplayModal
+          isOpen={showReplay}
+          onClose={() => setShowReplay(false)}
+          submission={replayData}
+        />
       </div>
     </div>
   );

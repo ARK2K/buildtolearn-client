@@ -2,16 +2,20 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
+import ViewReplayModal from '../components/ViewReplayModal';
 
 const Dashboard = () => {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showReplay, setShowReplay] = useState(false);
+  const [replayData, setReplayData] = useState(null);
+
   const { getToken } = useAuth();
 
   useEffect(() => {
     const fetchSubmissions = async () => {
       try {
-        const token = await getToken(); // 🔐 Clerk token for this user
+        const token = await getToken();
         const res = await axios.get('http://localhost:5000/api/submissions/user', {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -27,6 +31,18 @@ const Dashboard = () => {
 
     fetchSubmissions();
   }, [getToken]);
+
+  const getBadge = (score) => {
+    if (score >= 100) return '🥇';
+    if (score >= 80) return '🥈';
+    if (score >= 60) return '🥉';
+    return '';
+  };
+
+  const openReplay = (submission) => {
+    setReplayData(submission);
+    setShowReplay(true);
+  };
 
   if (loading) return <div className="p-6 text-center">Loading dashboard...</div>;
 
@@ -57,16 +73,33 @@ const Dashboard = () => {
                 <p className="text-sm text-gray-600 mt-1">Feedback: {s.feedback}</p>
               </div>
 
-              <Link
-                to={`/challenges/${s.challengeId}`}
-                className="mt-3 md:mt-0 inline-block bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
-              >
-                Retry
-              </Link>
+              <div className="mt-3 md:mt-0 flex items-center space-x-3">
+                <button
+                  onClick={() => openReplay(s)}
+                  className="text-blue-600 underline text-sm hover:text-blue-800 transition"
+                >
+                  ▶ View
+                </button>
+
+                <span className="text-2xl">{getBadge(s.score)}</span>
+
+                <Link
+                  to={`/challenges/${s.challengeId}`}
+                  className="inline-block bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
+                >
+                  Retry
+                </Link>
+              </div>
             </div>
           ))}
         </div>
       )}
+
+      <ViewReplayModal
+        isOpen={showReplay}
+        onClose={() => setShowReplay(false)}
+        submission={replayData}
+      />
     </div>
   );
 };
