@@ -42,6 +42,7 @@ const App = () => (
         }
       />
       <Route path="/leaderboard" element={<Leaderboard />} />
+      <Route path="/leaderboard/:challengeId" element={<Leaderboard />} />
     </Routes>
   </div>
 );

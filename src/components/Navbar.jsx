@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   UserButton,
@@ -9,6 +9,13 @@ import {
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [latestChallengeId, setLatestChallengeId] = useState(null);
+
+  useEffect(() => {
+    const storedChallengeId = localStorage.getItem('lastChallengeId');
+    if (storedChallengeId) setLatestChallengeId(storedChallengeId);
+  }, []);
 
   const navLinks = [
     { name: 'Home', to: '/' },
@@ -24,7 +31,7 @@ const Navbar = () => {
         </Link>
 
         {/* Desktop Links */}
-        <ul className="hidden md:flex space-x-6 font-medium items-center">
+        <ul className="hidden md:flex space-x-6 font-medium items-center relative">
           {navLinks.map((link) => (
             <li key={link.to}>
               <Link
@@ -35,6 +42,40 @@ const Navbar = () => {
               </Link>
             </li>
           ))}
+
+          {/* 🏆 Leaderboards with clickable toggle */}
+          <li className="relative">
+            <div
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center space-x-1 cursor-pointer text-gray-700 hover:text-indigo-600 transition"
+            >
+              <span>Leaderboards</span>
+              <span>{dropdownOpen ? '▲' : '▼'}</span>
+            </div>
+            {dropdownOpen && (
+              <ul className="absolute top-full left-0 mt-2 w-56 bg-white border shadow-md rounded-lg py-1 z-50">
+                <li>
+                  <Link
+                    to="/leaderboard"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    🌍 Global Leaderboard
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to={latestChallengeId ? `/leaderboard/${latestChallengeId}` : '/challenges'}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    🧩 Challenge Leaderboard
+                  </Link>
+                </li>
+              </ul>
+            )}
+          </li>
+
           <li>
             <SignedIn>
               <UserButton afterSignOutUrl="/" />
@@ -85,6 +126,26 @@ const Navbar = () => {
                 </Link>
               </li>
             ))}
+            {/* Leaderboards (mobile) */}
+            <li>
+              <Link
+                to="/leaderboard"
+                onClick={() => setMenuOpen(false)}
+                className="block text-gray-700 hover:text-indigo-600 transition"
+              >
+                🌍 Global Leaderboard
+              </Link>
+            </li>
+            <li>
+              <Link
+                to={latestChallengeId ? `/leaderboard/${latestChallengeId}` : '/challenges'}
+                onClick={() => setMenuOpen(false)}
+                className="block text-gray-700 hover:text-indigo-600 transition"
+              >
+                🧩 Challenge Leaderboard
+              </Link>
+            </li>
+
             <li>
               <SignedIn>
                 <UserButton afterSignOutUrl="/" />

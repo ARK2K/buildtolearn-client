@@ -1,14 +1,24 @@
 import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import axios from 'axios';
 
 const Leaderboard = () => {
+  const { challengeId } = useParams(); // may be undefined for global
   const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [title, setTitle] = useState('Leaderboard');
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/leaderboard');
+        let res;
+        if (challengeId) {
+          res = await axios.get(`http://localhost:5000/api/leaderboard/challenge/${challengeId}`);
+          setTitle('Challenge Leaderboard');
+        } else {
+          res = await axios.get(`http://localhost:5000/api/leaderboard/global`);
+          setTitle('Global Leaderboard');
+        }
         setLeaders(res.data);
       } catch (err) {
         console.error('Failed to fetch leaderboard', err);
@@ -18,9 +28,7 @@ const Leaderboard = () => {
     };
 
     fetchLeaderboard();
-  }, []);
-
-  if (loading) return <div className="p-6 text-center">Loading leaderboard...</div>;
+  }, [challengeId]);
 
   const getBadge = (rank) => {
     if (rank === 1) return '🥇';
@@ -29,9 +37,13 @@ const Leaderboard = () => {
     return `#${rank}`;
   };
 
+  if (loading) {
+    return <div className="p-6 text-center">Loading {title.toLowerCase()}...</div>;
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-center mb-6">🏆 Leaderboard</h1>
+      <h1 className="text-3xl font-bold text-center mb-6">🏆 {title}</h1>
       {leaders.length === 0 ? (
         <p className="text-center text-gray-500">No submissions yet.</p>
       ) : (
@@ -46,9 +58,9 @@ const Leaderboard = () => {
             </thead>
             <tbody>
               {leaders.map((entry, idx) => (
-                <tr key={entry.userId} className="border-t text-sm hover:bg-gray-50">
+                <tr key={entry._id || idx} className="border-t text-sm hover:bg-gray-50">
                   <td className="px-4 py-2 font-semibold">{getBadge(idx + 1)}</td>
-                  <td className="px-4 py-2">{entry.username || entry.userId}</td>
+                  <td className="px-4 py-2">{entry.username || entry._id}</td>
                   <td className="px-4 py-2">{entry.bestScore}</td>
                 </tr>
               ))}
