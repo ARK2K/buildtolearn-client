@@ -39,7 +39,7 @@ const Navbar = () => {
 
           <li>
             <SignedIn>
-              <UserButton afterSignOutUrl="/" />
+              <UserButton/>
             </SignedIn>
             <SignedOut>
               <SignInButton mode="modal">
@@ -89,7 +89,7 @@ const Navbar = () => {
             ))}
             <li>
               <SignedIn>
-                <UserButton afterSignOutUrl="/" />
+                <UserButton/>
               </SignedIn>
               <SignedOut>
                 <SignInButton mode="modal">
