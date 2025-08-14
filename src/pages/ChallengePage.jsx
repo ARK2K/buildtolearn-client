@@ -23,7 +23,7 @@ const ChallengePage = () => {
   const [showReplay, setShowReplay] = useState(false);
   const [replayData, setReplayData] = useState(null);
 
-  const fallbackImage = '/fallback.jpg';
+  const fallbackImage = 'https://res.cloudinary.com/dwfkxyeti/image/upload/v1755087763/fallback_m9xsvu.png' || '/public/fallback.png';
   const storageKey = `challenge-code-${id}`;
 
   const htmlRef = useRef('');

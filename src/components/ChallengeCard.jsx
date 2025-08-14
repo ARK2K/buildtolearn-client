@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 
 const ChallengeCard = ({ challenge }) => {
-  const fallbackImage = '/fallback.jpg'; // Place this image in /public/fallback.jpg
+  const fallbackImage = 'https://res.cloudinary.com/dwfkxyeti/image/upload/v1755087763/fallback_m9xsvu.png' || '/public/fallback.png';
   const imageUrl = challenge.image || fallbackImage;
 
   return (
