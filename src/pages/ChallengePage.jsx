@@ -24,22 +24,21 @@ const ChallengePage = () => {
   const [replayData, setReplayData] = useState(null);
 
   const fallbackImage =
-    'https://res.cloudinary.com/dwfkxyeti/image/upload/v1755087763/fallback_m9xsvu.png' ||
-    '/public/fallback.png';
+    'https://res.cloudinary.com/dwfkxyeti/image/upload/v1755087763/fallback_m9xsvu.png' || '/public/fallback.png';
   const storageKey = `challenge-code-${id}`;
 
   const htmlRef = useRef('');
   const cssRef = useRef('');
   const jsRef = useRef('');
 
-  // ✅ Helper to get starter code from challenge schema
+  // ✅ Get starter code from schema
   const getStarterFrom = (c) => ({
     html: c?.starterCode?.html ?? c?.htmlStarter ?? '',
     css: c?.starterCode?.css ?? c?.cssStarter ?? '',
     js: c?.starterCode?.js ?? c?.jsStarter ?? '',
   });
 
-  // 🧠 Fetch challenge + restore localStorage if exists
+  // 🧠 Fetch challenge
   useEffect(() => {
     const fetchChallenge = async () => {
       try {
@@ -84,7 +83,7 @@ const ChallengePage = () => {
     };
   }, [id]);
 
-  // 💾 Auto-save code (every keystroke, debounce 500ms)
+  // 💾 Auto-save code
   useEffect(() => {
     if (!loading) {
       const timeout = setTimeout(() => {
@@ -95,7 +94,7 @@ const ChallengePage = () => {
     }
   }, [html, css, js, loading]);
 
-  // 💾 Extra safeguard: save on page unload
+  // 💾 Extra safeguard: save on unload
   useEffect(() => {
     const handleBeforeUnload = () => {
       const code = { html, css, js };
@@ -127,7 +126,7 @@ const ChallengePage = () => {
     });
   };
 
-  // 🔄 Reset with confirmation
+  // 🔄 Reset button
   const handleReset = () => {
     if (!challenge) return;
     const confirmReset = window.confirm(
