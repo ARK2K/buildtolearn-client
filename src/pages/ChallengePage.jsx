@@ -32,19 +32,18 @@ const ChallengePage = () => {
   const cssRef = useRef('');
   const jsRef = useRef('');
 
-  // Helper: get starter code regardless of schema version
+  // ✅ Helper to get starter code from challenge schema
   const getStarterFrom = (c) => ({
     html: c?.starterCode?.html ?? c?.htmlStarter ?? '',
     css: c?.starterCode?.css ?? c?.cssStarter ?? '',
     js: c?.starterCode?.js ?? c?.jsStarter ?? '',
   });
 
-  // 🧠 Fetch challenge
+  // 🧠 Fetch challenge + restore localStorage if exists
   useEffect(() => {
     const fetchChallenge = async () => {
       try {
         const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
-
         const res = await axios.get(`http://localhost:5000/api/challenges/${id}`);
         const chall = res.data;
         setChallenge(chall);
@@ -69,7 +68,7 @@ const ChallengePage = () => {
     fetchChallenge();
   }, [id]);
 
-  // 🔄 Socket: Join room and listen for code changes
+  // 🔄 Socket setup
   useEffect(() => {
     socket.emit('join-room', id);
 
@@ -85,7 +84,7 @@ const ChallengePage = () => {
     };
   }, [id]);
 
-  // 💾 Autosave code
+  // 💾 Auto-save code (every keystroke, debounce 500ms)
   useEffect(() => {
     if (!loading) {
       const timeout = setTimeout(() => {
@@ -95,6 +94,16 @@ const ChallengePage = () => {
       return () => clearTimeout(timeout);
     }
   }, [html, css, js, loading]);
+
+  // 💾 Extra safeguard: save on page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const code = { html, css, js };
+      localStorage.setItem(storageKey, JSON.stringify(code));
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [html, css, js]);
 
   // 🧠 Code change
   const handleCodeChange = (lang, value) => {
@@ -118,16 +127,21 @@ const ChallengePage = () => {
     });
   };
 
-  // 🔄 Reset to starter (handles both schemas)
+  // 🔄 Reset with confirmation
   const handleReset = () => {
     if (!challenge) return;
+    const confirmReset = window.confirm(
+      'Are you sure you want to reset? Your current code will be lost.'
+    );
+    if (!confirmReset) return;
+
     const starter = getStarterFrom(challenge);
 
     setHtml(starter.html);
     setCss(starter.css);
     setJs(starter.js);
 
-    // persist the reset so a page refresh keeps starter code
+    // persist reset
     localStorage.setItem(storageKey, JSON.stringify(starter));
 
     // notify collaborators
@@ -188,7 +202,7 @@ const ChallengePage = () => {
     </html>
   `;
 
-  // 🔍 Show replay modal
+  // 🔍 Replay modal
   const openReplay = (submission) => {
     setReplayData(submission);
     setShowReplay(true);
