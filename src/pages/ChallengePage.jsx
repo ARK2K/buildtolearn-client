@@ -23,31 +23,41 @@ const ChallengePage = () => {
   const [showReplay, setShowReplay] = useState(false);
   const [replayData, setReplayData] = useState(null);
 
-  const fallbackImage = 'https://res.cloudinary.com/dwfkxyeti/image/upload/v1755087763/fallback_m9xsvu.png' || '/public/fallback.png';
+  const fallbackImage =
+    'https://res.cloudinary.com/dwfkxyeti/image/upload/v1755087763/fallback_m9xsvu.png' ||
+    '/public/fallback.png';
   const storageKey = `challenge-code-${id}`;
 
   const htmlRef = useRef('');
   const cssRef = useRef('');
   const jsRef = useRef('');
 
+  // Helper: get starter code regardless of schema version
+  const getStarterFrom = (c) => ({
+    html: c?.starterCode?.html ?? c?.htmlStarter ?? '',
+    css: c?.starterCode?.css ?? c?.cssStarter ?? '',
+    js: c?.starterCode?.js ?? c?.jsStarter ?? '',
+  });
+
   // 🧠 Fetch challenge
   useEffect(() => {
     const fetchChallenge = async () => {
       try {
-        const saved = JSON.parse(localStorage.getItem(storageKey));
+        const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+
+        const res = await axios.get(`http://localhost:5000/api/challenges/${id}`);
+        const chall = res.data;
+        setChallenge(chall);
+
         if (saved) {
           setHtml(saved.html || '');
           setCss(saved.css || '');
           setJs(saved.js || '');
-        }
-
-        const res = await axios.get(`http://localhost:5000/api/challenges/${id}`);
-        setChallenge(res.data);
-
-        if (!saved) {
-          setHtml(res.data.htmlStarter || '');
-          setCss(res.data.cssStarter || '');
-          setJs(res.data.jsStarter || '');
+        } else {
+          const starter = getStarterFrom(chall);
+          setHtml(starter.html);
+          setCss(starter.css);
+          setJs(starter.js);
         }
       } catch (err) {
         console.error('Failed to load challenge', err);
@@ -88,23 +98,47 @@ const ChallengePage = () => {
 
   // 🧠 Code change
   const handleCodeChange = (lang, value) => {
+    const safeVal = value ?? '';
     if (lang === 'html') {
-      setHtml(value);
-      htmlRef.current = value;
+      setHtml(safeVal);
+      htmlRef.current = safeVal;
     } else if (lang === 'css') {
-      setCss(value);
-      cssRef.current = value;
+      setCss(safeVal);
+      cssRef.current = safeVal;
     } else {
-      setJs(value);
-      jsRef.current = value;
+      setJs(safeVal);
+      jsRef.current = safeVal;
     }
 
     socket.emit('code-change', {
       roomId: id,
-      html: lang === 'html' ? value : undefined,
-      css: lang === 'css' ? value : undefined,
-      js: lang === 'js' ? value : undefined,
+      html: lang === 'html' ? safeVal : undefined,
+      css: lang === 'css' ? safeVal : undefined,
+      js: lang === 'js' ? safeVal : undefined,
     });
+  };
+
+  // 🔄 Reset to starter (handles both schemas)
+  const handleReset = () => {
+    if (!challenge) return;
+    const starter = getStarterFrom(challenge);
+
+    setHtml(starter.html);
+    setCss(starter.css);
+    setJs(starter.js);
+
+    // persist the reset so a page refresh keeps starter code
+    localStorage.setItem(storageKey, JSON.stringify(starter));
+
+    // notify collaborators
+    socket.emit('code-change', {
+      roomId: id,
+      html: starter.html,
+      css: starter.css,
+      js: starter.js,
+    });
+
+    toast.success('Code reset to starter template');
   };
 
   // 🚀 Submit code
@@ -144,8 +178,9 @@ const ChallengePage = () => {
 
   // 🧠 Generate preview
   const generateCode = () => `
+    <!doctype html>
     <html>
-      <head><style>${css}</style></head>
+      <head><meta charset="utf-8" /><style>${css}</style></head>
       <body>
         ${html}
         <script>${js}<\/script>
@@ -162,19 +197,31 @@ const ChallengePage = () => {
   if (loading) return <div className="p-6 text-center">Loading...</div>;
   if (!challenge) return <div className="p-6 text-center text-red-600">Challenge not found.</div>;
 
+  const difficultyColors = {
+    Easy: 'bg-green-100 text-green-700 border-green-300',
+    Medium: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+    Hard: 'bg-red-100 text-red-700 border-red-300',
+  };
+
   return (
     <div className="flex flex-col lg:flex-row min-h-screen">
       {/* Left - Challenge Info */}
       <div className="w-full lg:w-1/3 border-r border-gray-200 p-4">
-        <h1 className="text-2xl font-bold mb-4">{challenge.title}</h1>
-        <p className="text-gray-600 mb-4">{challenge.description}</p>
+        <h1 className="text-2xl font-bold mb-2">{challenge.title}</h1>
+        <span
+          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${
+            difficultyColors[challenge.difficulty] || 'bg-gray-200 text-gray-700 border-gray-300'
+          }`}
+        >
+          {challenge.difficulty}
+        </span>
+        <p className="text-gray-600 mt-4 mb-4">{challenge.description}</p>
         <img
           src={challenge.image || fallbackImage}
           alt={challenge.title}
           className="rounded-lg shadow mb-4"
         />
         <ul className="text-sm text-gray-500 list-disc list-inside">
-          <li>Difficulty: {challenge.difficulty}</li>
           <li>Use only HTML/CSS/JS</li>
           <li>Make it responsive</li>
         </ul>
@@ -214,12 +261,21 @@ const ChallengePage = () => {
           sandbox="allow-scripts"
         />
 
-        <button
-          onClick={handleSubmit}
-          className="mt-4 self-start bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow transition"
-        >
-          Submit Challenge
-        </button>
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            onClick={handleSubmit}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow transition"
+          >
+            Submit Challenge
+          </button>
+
+          <button
+            onClick={handleReset}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-semibold px-4 py-2 rounded-lg transition"
+          >
+            Reset
+          </button>
+        </div>
 
         {/* 🏆 Leaderboard + Modal */}
         <ChallengeLeaderboard challengeId={id} onReplay={openReplay} />
