@@ -1,9 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
+import ReplayModal from './ReplayModal';
 
-const ChallengeLeaderboard = ({ challengeId, onReplay }) => {
+const ChallengeLeaderboard = ({ challengeId }) => {
   const [leaders, setLeaders] = useState([]);
+  const [selectedReplay, setSelectedReplay] = useState(null); // for modal
 
   // memoize socket so it isn’t recreated on every render
   const socket = useMemo(() => io('http://localhost:5000'), []);
@@ -73,18 +75,25 @@ const ChallengeLeaderboard = ({ challengeId, onReplay }) => {
                 <span className="text-indigo-600 font-semibold">
                   Score: {entry.score}
                 </span>
-                {onReplay && (
-                  <button
-                    onClick={() => onReplay(entry)}
-                    className="text-blue-500 underline hover:text-blue-700 transition text-xs"
-                  >
-                    ▶ View
-                  </button>
-                )}
+                <button
+                  onClick={() => setSelectedReplay(entry)}
+                  className="text-blue-500 underline hover:text-blue-700 transition text-xs"
+                >
+                  ▶ View
+                </button>
               </div>
             </li>
           ))}
         </ol>
+      )}
+
+      {/* Replay Modal */}
+      {selectedReplay && (
+        <ReplayModal
+          isOpen={!!selectedReplay}
+          onClose={() => setSelectedReplay(null)}
+          replayData={selectedReplay}
+        />
       )}
     </div>
   );
