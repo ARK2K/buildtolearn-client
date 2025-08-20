@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
-
-const socket = io('http://localhost:5000');
 
 const ChallengeLeaderboard = ({ challengeId, onReplay }) => {
   const [leaders, setLeaders] = useState([]);
 
+  // memoize socket so it isn’t recreated on every render
+  const socket = useMemo(() => io('http://localhost:5000'), []);
+
   const fetchLeaderboard = async () => {
+    if (!challengeId) return;
     try {
       const res = await axios.get(
         `http://localhost:5000/api/leaderboard/challenge/${challengeId}`
@@ -23,17 +25,22 @@ const ChallengeLeaderboard = ({ challengeId, onReplay }) => {
 
     fetchLeaderboard();
 
+    // join challenge-specific room
     socket.emit('join-room', `leaderboard-${challengeId}`);
 
-    socket.on('leaderboard-update', (updatedChallengeId) => {
-      if (updatedChallengeId === challengeId) fetchLeaderboard();
-    });
+    // listen for updates
+    const handleUpdate = (updatedChallengeId) => {
+      if (updatedChallengeId === challengeId) {
+        fetchLeaderboard();
+      }
+    };
+    socket.on('leaderboard-update', handleUpdate);
 
     return () => {
       socket.emit('leave-room', `leaderboard-${challengeId}`);
-      socket.off('leaderboard-update');
+      socket.off('leaderboard-update', handleUpdate);
     };
-  }, [challengeId]);
+  }, [challengeId, socket]);
 
   if (!challengeId) return null;
 
@@ -47,32 +54,38 @@ const ChallengeLeaderboard = ({ challengeId, onReplay }) => {
   return (
     <div className="bg-white p-6 rounded-lg shadow mt-6">
       <h2 className="text-lg font-bold mb-4">🏆 Challenge Leaderboard</h2>
-      <ol className="space-y-2">
-        {leaders.map((entry, idx) => (
-          <li
-            key={entry._id}
-            className="flex justify-between items-center text-sm border-b pb-1"
-          >
-            <div className="flex items-center space-x-2">
-              <span className="text-xl">{getBadge(idx)}</span>
-              <span className="font-medium">
-                {idx + 1}. {entry.username || 'Anonymous'}
-              </span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <span className="text-indigo-600 font-semibold">Score: {entry.score}</span>
-              {onReplay && (
-                <button
-                  onClick={() => onReplay(entry)}
-                  className="text-blue-500 underline hover:text-blue-700 transition text-xs"
-                >
-                  ▶ View
-                </button>
-              )}
-            </div>
-          </li>
-        ))}
-      </ol>
+      {leaders.length === 0 ? (
+        <p className="text-gray-500 text-sm">No submissions yet for this challenge.</p>
+      ) : (
+        <ol className="space-y-2">
+          {leaders.map((entry, idx) => (
+            <li
+              key={entry._id}
+              className="flex justify-between items-center text-sm border-b pb-1"
+            >
+              <div className="flex items-center space-x-2">
+                <span className="text-xl">{getBadge(idx)}</span>
+                <span className="font-medium">
+                  {idx + 1}. {entry.username || 'Anonymous'}
+                </span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <span className="text-indigo-600 font-semibold">
+                  Score: {entry.score}
+                </span>
+                {onReplay && (
+                  <button
+                    onClick={() => onReplay(entry)}
+                    className="text-blue-500 underline hover:text-blue-700 transition text-xs"
+                  >
+                    ▶ View
+                  </button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 };

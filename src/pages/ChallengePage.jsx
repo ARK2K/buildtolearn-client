@@ -3,12 +3,10 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import Editor from '@monaco-editor/react';
 import { toast } from 'sonner';
-import { io } from 'socket.io-client';
 import { useAuth } from '@clerk/clerk-react';
 import ChallengeLeaderboard from '../components/ChallengeLeaderboard';
 import ViewReplayModal from '../components/ViewReplayModal';
-
-const socket = io('http://localhost:5000');
+import socket from '../utils/socket'; // ✅ single socket instance
 
 const ChallengePage = () => {
   const { id } = useParams();
@@ -20,18 +18,19 @@ const ChallengePage = () => {
   const [js, setJs] = useState('');
   const [activeTab, setActiveTab] = useState('html');
   const [loading, setLoading] = useState(true);
+
   const [showReplay, setShowReplay] = useState(false);
   const [replayData, setReplayData] = useState(null);
 
+  const storageKey = `challenge-code-${id}`;
   const fallbackImage =
     'https://res.cloudinary.com/dwfkxyeti/image/upload/v1755087763/fallback_m9xsvu.png' || '/public/fallback.png';
-  const storageKey = `challenge-code-${id}`;
 
   const htmlRef = useRef('');
   const cssRef = useRef('');
   const jsRef = useRef('');
 
-  // ✅ Get starter code from schema
+  // ✅ starter extractor
   const getStarterFrom = (c) => ({
     html: c?.starterCode?.html ?? c?.htmlStarter ?? '',
     css: c?.starterCode?.css ?? c?.cssStarter ?? '',
@@ -67,8 +66,10 @@ const ChallengePage = () => {
     fetchChallenge();
   }, [id]);
 
-  // 🔄 Socket setup
+  // 🔄 Socket setup for collab
   useEffect(() => {
+    if (!id) return;
+
     socket.emit('join-room', id);
 
     socket.on('code-update', ({ html, css, js }) => {
@@ -83,7 +84,7 @@ const ChallengePage = () => {
     };
   }, [id]);
 
-  // 💾 Auto-save code
+  // 💾 Auto-save
   useEffect(() => {
     if (!loading) {
       const timeout = setTimeout(() => {
@@ -94,7 +95,7 @@ const ChallengePage = () => {
     }
   }, [html, css, js, loading]);
 
-  // 💾 Extra safeguard: save on unload
+  // 💾 Save on unload
   useEffect(() => {
     const handleBeforeUnload = () => {
       const code = { html, css, js };
@@ -129,13 +130,9 @@ const ChallengePage = () => {
   // 🔄 Reset button
   const handleReset = () => {
     if (!challenge) return;
-    const confirmReset = window.confirm(
-      'Are you sure you want to reset? Your current code will be lost.'
-    );
-    if (!confirmReset) return;
+    if (!window.confirm('Reset to starter template? Current code will be lost.')) return;
 
     const starter = getStarterFrom(challenge);
-
     setHtml(starter.html);
     setCss(starter.css);
     setJs(starter.js);
@@ -158,7 +155,6 @@ const ChallengePage = () => {
   const handleSubmit = async () => {
     try {
       toast.loading('Submitting your code...', { id: 'submit' });
-
       const token = await getToken();
       const res = await axios.post(
         'http://localhost:5000/api/submissions',
@@ -170,12 +166,9 @@ const ChallengePage = () => {
           js,
         },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
-
       toast.dismiss('submit');
 
       if (res.data.success) {
@@ -242,6 +235,7 @@ const ChallengePage = () => {
 
       {/* Right - Editor + Preview + Leaderboard */}
       <div className="w-full lg:w-2/3 p-4 flex flex-col">
+        {/* Tabs */}
         <div className="flex space-x-2 mb-2">
           {['html', 'css', 'js'].map((lang) => (
             <button
@@ -256,6 +250,7 @@ const ChallengePage = () => {
           ))}
         </div>
 
+        {/* Editor */}
         <div className="h-64 mb-4 border border-gray-200 rounded-lg overflow-hidden">
           <Editor
             height="100%"
@@ -266,6 +261,7 @@ const ChallengePage = () => {
           />
         </div>
 
+        {/* Preview */}
         <h2 className="text-lg font-semibold mb-2">Live Preview</h2>
         <iframe
           title="preview"
@@ -274,6 +270,7 @@ const ChallengePage = () => {
           sandbox="allow-scripts"
         />
 
+        {/* Buttons */}
         <div className="mt-4 flex items-center gap-3">
           <button
             onClick={handleSubmit}
@@ -281,7 +278,6 @@ const ChallengePage = () => {
           >
             Submit Challenge
           </button>
-
           <button
             onClick={handleReset}
             className="bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-semibold px-4 py-2 rounded-lg transition"
@@ -290,9 +286,10 @@ const ChallengePage = () => {
           </button>
         </div>
 
-        {/* 🏆 Leaderboard + Modal */}
+        {/* 🏆 Challenge Leaderboard */}
         <ChallengeLeaderboard challengeId={id} onReplay={openReplay} />
 
+        {/* 🎥 Replay Modal */}
         <ViewReplayModal
           isOpen={showReplay}
           onClose={() => setShowReplay(false)}
