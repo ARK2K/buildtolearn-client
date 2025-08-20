@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
-import ReplayModal from './ReplayModal';
+import ViewReplayModal from './ViewReplayModal'; // ✅ renamed
 
 const ChallengeLeaderboard = ({ challengeId }) => {
   const [leaders, setLeaders] = useState([]);
@@ -89,7 +89,7 @@ const ChallengeLeaderboard = ({ challengeId }) => {
 
       {/* Replay Modal */}
       {selectedReplay && (
-        <ReplayModal
+        <ViewReplayModal
           isOpen={!!selectedReplay}
           onClose={() => setSelectedReplay(null)}
           replayData={selectedReplay}

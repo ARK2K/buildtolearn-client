@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
+import ViewReplayModal from './ViewReplayModal';
 
 const socket = io('http://localhost:5000');
 
 const GlobalLeaderboard = () => {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // modal state
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchLeaderboard = async () => {
     try {
@@ -37,6 +42,11 @@ const GlobalLeaderboard = () => {
     return '';
   };
 
+  const handleReplay = (entry) => {
+    setSelectedSubmission(entry);
+    setIsModalOpen(true);
+  };
+
   if (loading) return <div className="text-center p-4">Loading leaderboard...</div>;
   if (!entries.length) return <div className="text-center p-4">No submissions yet.</div>;
 
@@ -52,6 +62,7 @@ const GlobalLeaderboard = () => {
             <th className="p-2 border">Challenge</th>
             <th className="p-2 border">Score</th>
             <th className="p-2 border">Submitted</th>
+            <th className="p-2 border">Replay</th>
           </tr>
         </thead>
         <tbody>
@@ -63,10 +74,25 @@ const GlobalLeaderboard = () => {
               <td className="p-2 border">{entry.challengeTitle}</td>
               <td className="p-2 border font-semibold text-indigo-600">{entry.score}</td>
               <td className="p-2 border">{new Date(entry.submittedAt).toLocaleString()}</td>
+              <td className="p-2 border text-center">
+                <button
+                  onClick={() => handleReplay(entry)}
+                  className="text-blue-500 underline hover:text-blue-700 transition text-xs"
+                >
+                  ▶ View
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {/* Replay Modal */}
+      <ViewReplayModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        submission={selectedSubmission}
+      />
     </div>
   );
 };
