@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@clerk/clerk-react';
 import ChallengeLeaderboard from '../components/ChallengeLeaderboard';
 import ViewReplayModal from '../components/ViewReplayModal';
-import socket from '../utils/socket'; // ✅ single socket instance
+import socket from '../utils/socket';
 
 const ChallengePage = () => {
   const { id } = useParams();
