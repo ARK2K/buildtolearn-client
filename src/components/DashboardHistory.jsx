@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"; 
 import axios from "axios";
 import { useAuth } from "@clerk/clerk-react";
 import { Line } from "react-chartjs-2";
@@ -28,6 +28,7 @@ const DashboardHistory = () => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // "4", "8", "all"
+  const [showStreak, setShowStreak] = useState(true);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -80,17 +81,21 @@ const DashboardHistory = () => {
         backgroundColor: "rgba(59, 130, 246, 0.2)",
         tension: 0.3,
         fill: true,
-        yAxisID: "y", // score axis
+        yAxisID: "y",
       },
-      {
-        label: "Streak",
-        data: streaks,
-        borderColor: "rgb(234, 88, 12)", // Tailwind orange-600
-        backgroundColor: "rgba(234, 88, 12, 0.2)",
-        tension: 0.3,
-        fill: false,
-        yAxisID: "y1", // streak axis
-      },
+      ...(showStreak
+        ? [
+            {
+              label: "Streak",
+              data: streaks,
+              borderColor: "rgb(234, 88, 12)", // Tailwind orange-600
+              backgroundColor: "rgba(234, 88, 12, 0.2)",
+              tension: 0.3,
+              fill: false,
+              yAxisID: "y1",
+            },
+          ]
+        : []),
     ],
   };
 
@@ -132,38 +137,51 @@ const DashboardHistory = () => {
         week{currentStreak === 1 ? "" : "s"}
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setFilter("4")}
-          className={`px-3 py-1 rounded ${
-            filter === "4"
-              ? "bg-blue-500 text-white"
-              : "bg-gray-100 text-gray-700"
-          }`}
-        >
-          Last 4
-        </button>
-        <button
-          onClick={() => setFilter("8")}
-          className={`px-3 py-1 rounded ${
-            filter === "8"
-              ? "bg-blue-500 text-white"
-              : "bg-gray-100 text-gray-700"
-          }`}
-        >
-          Last 8
-        </button>
-        <button
-          onClick={() => setFilter("all")}
-          className={`px-3 py-1 rounded ${
-            filter === "all"
-              ? "bg-blue-500 text-white"
-              : "bg-gray-100 text-gray-700"
-          }`}
-        >
-          All
-        </button>
+      {/* Filters + Toggle */}
+      <div className="flex flex-wrap gap-3 mb-6 items-center">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setFilter("4")}
+            className={`px-3 py-1 rounded ${
+              filter === "4"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            Last 4
+          </button>
+          <button
+            onClick={() => setFilter("8")}
+            className={`px-3 py-1 rounded ${
+              filter === "8"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            Last 8
+          </button>
+          <button
+            onClick={() => setFilter("all")}
+            className={`px-3 py-1 rounded ${
+              filter === "all"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            All
+          </button>
+        </div>
+
+        {/* Toggle Streak */}
+        <label className="flex items-center gap-2 text-gray-700 text-sm">
+          <input
+            type="checkbox"
+            checked={showStreak}
+            onChange={() => setShowStreak(!showStreak)}
+            className="w-4 h-4 text-blue-500 border-gray-300 rounded"
+          />
+          Show Streak
+        </label>
       </div>
 
       {/* Chart */}
@@ -179,7 +197,7 @@ const DashboardHistory = () => {
               <th className="p-3 border">Week</th>
               <th className="p-3 border">Score</th>
               <th className="p-3 border">Submissions</th>
-              <th className="p-3 border">Streak</th>
+              {showStreak && <th className="p-3 border">Streak</th>}
             </tr>
           </thead>
           <tbody>
@@ -188,7 +206,7 @@ const DashboardHistory = () => {
                 <td className="p-3 border">{h.label}</td>
                 <td className="p-3 border font-semibold">{h.score}</td>
                 <td className="p-3 border">{h.submissions}</td>
-                <td className="p-3 border">{h.streak}</td>
+                {showStreak && <td className="p-3 border">{h.streak}</td>}
               </tr>
             ))}
           </tbody>
