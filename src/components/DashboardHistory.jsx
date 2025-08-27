@@ -27,6 +27,7 @@ const DashboardHistory = () => {
   const { getToken } = useAuth();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all"); // "4", "8", "all"
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -36,9 +37,9 @@ const DashboardHistory = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        // Ensure response is always an array
         const safeData = Array.isArray(res.data) ? res.data : [];
-        setHistory(safeData);
+        setHistory(safeData.reverse()); 
+        // reverse so newest is at index 0 for banner, table, chart filters
       } catch (err) {
         console.error("Error fetching history:", err);
         setHistory([]);
@@ -53,13 +54,21 @@ const DashboardHistory = () => {
     return <p className="text-center text-gray-500">Loading history...</p>;
   }
 
-  if (!Array.isArray(history) || history.length === 0) {
+  if (!history.length) {
     return <p className="text-center text-gray-500">No history available</p>;
   }
 
-  // Use backend-provided label + score
-  const labels = history.map((h) => h.label);
-  const scores = history.map((h) => h.score);
+  // Apply filter
+  let filteredHistory = history;
+  if (filter === "4") {
+    filteredHistory = history.slice(0, 4);
+  } else if (filter === "8") {
+    filteredHistory = history.slice(0, 8);
+  }
+
+  const labels = filteredHistory.map((h) => h.label).reverse();
+  const scores = filteredHistory.map((h) => h.score).reverse();
+  const streaks = filteredHistory.map((h) => h.streak).reverse();
 
   const data = {
     labels,
@@ -71,6 +80,16 @@ const DashboardHistory = () => {
         backgroundColor: "rgba(59, 130, 246, 0.2)",
         tension: 0.3,
         fill: true,
+        yAxisID: "y", // score axis
+      },
+      {
+        label: "Streak",
+        data: streaks,
+        borderColor: "rgb(234, 88, 12)", // Tailwind orange-600
+        backgroundColor: "rgba(234, 88, 12, 0.2)",
+        tension: 0.3,
+        fill: false,
+        yAxisID: "y1", // streak axis
       },
     ],
   };
@@ -85,11 +104,67 @@ const DashboardHistory = () => {
         font: { size: 18 },
       },
     },
+    scales: {
+      y: {
+        type: "linear",
+        position: "left",
+        title: { display: true, text: "Score" },
+      },
+      y1: {
+        type: "linear",
+        position: "right",
+        grid: { drawOnChartArea: false },
+        title: { display: true, text: "Streak" },
+      },
+    },
   };
+
+  // current streak is newest (index 0 after reversing at fetch)
+  const currentStreak = history[0]?.streak ?? 0;
 
   return (
     <div className="bg-white shadow rounded-2xl p-6 mb-8">
       <h2 className="text-xl font-bold mb-4">📊 My Weekly History</h2>
+
+      {/* Streak Banner */}
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 font-medium">
+        🔥 Current Streak: <span className="font-bold">{currentStreak}</span>{" "}
+        week{currentStreak === 1 ? "" : "s"}
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setFilter("4")}
+          className={`px-3 py-1 rounded ${
+            filter === "4"
+              ? "bg-blue-500 text-white"
+              : "bg-gray-100 text-gray-700"
+          }`}
+        >
+          Last 4
+        </button>
+        <button
+          onClick={() => setFilter("8")}
+          className={`px-3 py-1 rounded ${
+            filter === "8"
+              ? "bg-blue-500 text-white"
+              : "bg-gray-100 text-gray-700"
+          }`}
+        >
+          Last 8
+        </button>
+        <button
+          onClick={() => setFilter("all")}
+          className={`px-3 py-1 rounded ${
+            filter === "all"
+              ? "bg-blue-500 text-white"
+              : "bg-gray-100 text-gray-700"
+          }`}
+        >
+          All
+        </button>
+      </div>
 
       {/* Chart */}
       <div className="mb-6">
@@ -104,14 +179,16 @@ const DashboardHistory = () => {
               <th className="p-3 border">Week</th>
               <th className="p-3 border">Score</th>
               <th className="p-3 border">Submissions</th>
+              <th className="p-3 border">Streak</th>
             </tr>
           </thead>
           <tbody>
-            {history.map((h, idx) => (
+            {filteredHistory.map((h, idx) => (
               <tr key={idx} className="hover:bg-gray-50">
                 <td className="p-3 border">{h.label}</td>
                 <td className="p-3 border font-semibold">{h.score}</td>
                 <td className="p-3 border">{h.submissions}</td>
+                <td className="p-3 border">{h.streak}</td>
               </tr>
             ))}
           </tbody>
