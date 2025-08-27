@@ -68,13 +68,18 @@ const ChallengeLeaderboard = ({ challengeId }) => {
               <div className="flex items-center space-x-2">
                 <span className="text-xl">{getBadge(idx)}</span>
                 <span className="font-medium">
-                  {idx + 1}. {entry.username || 'Anonymous'}
+                  {idx + 1}. {entry.username || entry.displayName || 'Anonymous'}
                 </span>
               </div>
               <div className="flex items-center space-x-3">
                 <span className="text-indigo-600 font-semibold">
                   Score: {entry.score}
                 </span>
+                {entry.highestStreak !== undefined && (
+                  <span className="text-orange-600 font-medium">
+                    🔥 Streak: {entry.highestStreak}
+                  </span>
+                )}
                 <button
                   onClick={() => setSelectedReplay(entry)}
                   className="text-blue-500 underline hover:text-blue-700 transition text-xs"
@@ -92,7 +97,7 @@ const ChallengeLeaderboard = ({ challengeId }) => {
         <ViewReplayModal
           isOpen={!!selectedReplay}
           onClose={() => setSelectedReplay(null)}
-          submission={selectedReplay} // ✅ match GlobalLeaderboard
+          submission={selectedReplay}
         />
       )}
     </div>

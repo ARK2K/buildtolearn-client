@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"; 
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "@clerk/clerk-react";
 import { Line } from "react-chartjs-2";
@@ -29,6 +29,8 @@ const DashboardHistory = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // "4", "8", "all"
   const [showStreak, setShowStreak] = useState(true);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [highestStreak, setHighestStreak] = useState(0);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -38,12 +40,21 @@ const DashboardHistory = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const safeData = Array.isArray(res.data) ? res.data : [];
-        setHistory(safeData.reverse()); 
-        // reverse so newest is at index 0 for banner, table, chart filters
+        if (res.data && Array.isArray(res.data.history)) {
+          // newest first for charts/tables
+          setHistory(res.data.history.reverse());
+          setCurrentStreak(res.data.currentStreak || 0);
+          setHighestStreak(res.data.highestStreak || 0);
+        } else {
+          setHistory([]);
+          setCurrentStreak(0);
+          setHighestStreak(0);
+        }
       } catch (err) {
         console.error("Error fetching history:", err);
         setHistory([]);
+        setCurrentStreak(0);
+        setHighestStreak(0);
       } finally {
         setLoading(false);
       }
@@ -124,17 +135,17 @@ const DashboardHistory = () => {
     },
   };
 
-  // current streak is newest (index 0 after reversing at fetch)
-  const currentStreak = history[0]?.streak ?? 0;
-
   return (
     <div className="bg-white shadow rounded-2xl p-6 mb-8">
       <h2 className="text-xl font-bold mb-4">📊 My Weekly History</h2>
 
       {/* Streak Banner */}
       <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 font-medium">
-        🔥 Current Streak: <span className="font-bold">{currentStreak}</span>{" "}
-        week{currentStreak === 1 ? "" : "s"}
+        🔥 Current Streak:{" "}
+        <span className="font-bold">{currentStreak}</span> week
+        {currentStreak === 1 ? "" : "s"} &nbsp;|&nbsp; 🏆 Highest Streak:{" "}
+        <span className="font-bold">{highestStreak}</span> week
+        {highestStreak === 1 ? "" : "s"}
       </div>
 
       {/* Filters + Toggle */}

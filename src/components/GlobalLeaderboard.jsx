@@ -16,7 +16,14 @@ const GlobalLeaderboard = () => {
   const fetchLeaderboard = async () => {
     try {
       const res = await axios.get('http://localhost:5000/api/leaderboard/global');
-      setEntries(res.data);
+      
+      // ✅ sort by score first, then highestStreak
+      const sorted = [...res.data].sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return (b.highestStreak ?? 0) - (a.highestStreak ?? 0);
+      });
+
+      setEntries(sorted);
     } catch (err) {
       console.error('Failed to load leaderboard', err);
     } finally {
@@ -61,6 +68,7 @@ const GlobalLeaderboard = () => {
             <th className="p-2 border">User</th>
             <th className="p-2 border">Challenge</th>
             <th className="p-2 border">Score</th>
+            <th className="p-2 border">🔥 Highest Streak</th>
             <th className="p-2 border">Submitted</th>
             <th className="p-2 border">Replay</th>
           </tr>
@@ -73,6 +81,9 @@ const GlobalLeaderboard = () => {
               <td className="p-2 border">{entry.username || 'Anonymous'}</td>
               <td className="p-2 border">{entry.challengeTitle}</td>
               <td className="p-2 border font-semibold text-indigo-600">{entry.score}</td>
+              <td className="p-2 border text-orange-600 font-medium text-center">
+                {entry.highestStreak ?? 0}
+              </td>
               <td className="p-2 border">{new Date(entry.submittedAt).toLocaleString()}</td>
               <td className="p-2 border text-center">
                 <button
